@@ -1,8 +1,9 @@
 import 'wxt'
 import fs from 'node:fs/promises'
+import path from 'node:path'
 import { defineWxtModule } from 'wxt/modules'
 import { $ } from 'zx'
-import { updateInfoPlist, updateProjectConfig, createExportOptionsPlist } from './safari-utils'
+import { updateInfoPlist, updateProjectConfig, createExportOptionsPlist, normalizeConvertedProject } from './safari-utils'
 
 export interface SafariXcodeOptions {
   /**
@@ -112,6 +113,13 @@ export default defineWxtModule<SafariXcodeOptions>({
         if (!openProject) flags.push('--no-open');
 
         await $`xcrun safari-web-extension-converter --bundle-identifier ${bundleIdentifier} --project-location .output ${flags} .output/safari-mv${wxt.config.manifestVersion}`
+
+        // Normalize generated project location & name
+        await normalizeConvertedProject(
+          path.resolve(wxt.config.root, '.output'),
+          projectName,
+          wxt.config.manifestVersion,
+        )
 
         // Move to custom output path if needed
         if (outputPath !== `.output/${projectName}`) {

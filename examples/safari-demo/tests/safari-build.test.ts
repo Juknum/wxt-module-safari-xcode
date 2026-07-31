@@ -130,4 +130,17 @@ describe('Safari Xcode module — build scenarios', () => {
       await writeFile(pkgPath, original)
     }
   })
+
+  test('buildPackage: true generates ExportOptions.plist and triggers xcodebuild', async () => {
+    try {
+      await build({ env: { DEMO_BUILD_PACKAGE: '1' } })
+    } catch {
+      // xcodebuild archive may fail without active Apple Developer certificates, but ExportOptions.plist must be generated
+    }
+    expect(existsSync(path.join(outputDir, 'ExportOptions.plist'))).toBe(true)
+    const plist = await readFile(path.join(outputDir, 'ExportOptions.plist'), 'utf-8')
+    expect(plist).toContain('<key>method</key>')
+    expect(plist).toContain('<string>app-store</string>')
+  })
 })
+

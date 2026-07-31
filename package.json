@@ -23,7 +23,7 @@
   ],
   "scripts": {
     "setup": "pnpm build",
-    "build": "tsup src/index.ts --format esm --dts --out-dir dist --clean --external wxt",
+    "build": "tsup src/index.ts --format esm --out-dir dist --clean --external wxt && tsc --declaration --emitDeclarationOnly --rootDir src --outDir dist",
     "dev": "pnpm build --watch",
     "test": "pnpm build && pnpm --filter wxt-safari-demo test"
   },

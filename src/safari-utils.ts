@@ -170,3 +170,69 @@ ${entries.join('\n')}
   await fs.writeFile(filePath, content, 'utf-8')
 }
 
+export async function normalizeConvertedProject(
+  outputLocation: string,
+  targetProjectName: string,
+  manifestVersion: number,
+) {
+  const targetDirPath = path.resolve(outputLocation, targetProjectName)
+
+  // 1. Check if targetDirPath already has a .xcodeproj
+  if (await fs.stat(targetDirPath).then((s) => s.isDirectory()).catch(() => false)) {
+    const files = await fs.readdir(targetDirPath).catch(() => [])
+    const proj = files.find((f) => f.endsWith('.xcodeproj'))
+    if (proj) {
+      if (proj !== `${targetProjectName}.xcodeproj`) {
+        await fs.rename(
+          path.join(targetDirPath, proj),
+          path.join(targetDirPath, `${targetProjectName}.xcodeproj`),
+        )
+      }
+      return
+    }
+  }
+
+  // 2. Search all directories under outputLocation for a .xcodeproj
+  const entries = await fs.readdir(outputLocation, { withFileTypes: true })
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const dirPath = path.join(outputLocation, entry.name)
+    const files = await fs.readdir(dirPath).catch(() => [])
+    const proj = files.find((f) => f.endsWith('.xcodeproj'))
+    if (!proj) continue
+
+    const currentProjName = path.basename(proj, '.xcodeproj')
+
+    // If Apple converter put the xcode project directly inside safari-mv2/safari-mv3 build dir:
+    if (entry.name === `safari-mv${manifestVersion}`) {
+      await fs.mkdir(targetDirPath, { recursive: true })
+      const xcodeItems = files.filter(
+        (f) =>
+          f.endsWith('.xcodeproj') ||
+          f.includes('(App)') ||
+          f.includes('(Extension)') ||
+          f.endsWith('.xcworkspace'),
+      )
+      for (const item of xcodeItems) {
+        const dest = item.endsWith('.xcodeproj') ? `${targetProjectName}.xcodeproj` : item
+        await fs.rename(path.join(dirPath, item), path.join(targetDirPath, dest))
+      }
+      return
+    }
+
+    // If Apple converter created a separate directory (e.g. .output/OldName)
+    if (entry.name !== targetProjectName) {
+      await fs.rename(dirPath, targetDirPath)
+    }
+    if (currentProjName !== targetProjectName) {
+      const oldProjPath = path.join(targetDirPath, `${currentProjName}.xcodeproj`)
+      const newProjPath = path.join(targetDirPath, `${targetProjectName}.xcodeproj`)
+      if (await fs.stat(oldProjPath).then(() => true).catch(() => false)) {
+        await fs.rename(oldProjPath, newProjPath)
+      }
+    }
+    return
+  }
+}
+
+

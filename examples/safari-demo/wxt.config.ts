@@ -7,6 +7,7 @@ import { defineConfig } from 'wxt'
 const useManifestName = process.env.DEMO_NO_MANIFEST_NAME !== '1'
 const outputPath = process.env.DEMO_OUTPUT_PATH
 const projectType = (process.env.DEMO_PROJECT_TYPE as 'macos' | 'ios' | 'both' | undefined) ?? 'both'
+const buildPackage = process.env.DEMO_BUILD_PACKAGE === '1'
 
 export default defineConfig({
   modules: ['wxt-module-safari-xcode'],
@@ -16,6 +17,8 @@ export default defineConfig({
     bundleIdentifier: 'com.example.safari-demo',
     openProject: false,
     projectType,
+    buildPackage,
     ...(outputPath ? { outputPath } : {}),
   },
 })
+
