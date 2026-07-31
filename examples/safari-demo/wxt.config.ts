@@ -1,4 +1,5 @@
 import { defineConfig } from 'wxt'
+import path from 'node:path'
 
 // Driven by env vars so the regression suite can sweep scenarios:
 //   DEMO_NO_MANIFEST_NAME=1     -> drop manifest.name, exercise package.json fallback
@@ -10,7 +11,7 @@ const projectType = (process.env.DEMO_PROJECT_TYPE as 'macos' | 'ios' | 'both' |
 const buildPackage = process.env.DEMO_BUILD_PACKAGE === '1'
 
 export default defineConfig({
-  modules: ['wxt-module-safari-xcode'],
+  modules: [path.resolve(import.meta.dirname, '../../dist/index.js')],
   manifest: useManifestName ? { name: 'Safari Demo' } : {},
   safariXcode: {
     appCategory: 'public.app-category.productivity',
