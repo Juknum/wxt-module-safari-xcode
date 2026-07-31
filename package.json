@@ -34,11 +34,11 @@
   "sideEffects": false,
   "devDependencies": {
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
-    "wxt": "^0.20.13"
+    "typescript": "^7.0.2",
+    "wxt": "^0.21.3"
   },
   "optionalDependencies": {
-    "wxt": "^0.20.13"
+    "wxt": "^0.21.3"
   },
   "publishConfig": {
     "access": "public",
