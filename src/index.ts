@@ -2,7 +2,7 @@ import 'wxt'
 import fs from 'node:fs/promises'
 import { defineWxtModule } from 'wxt/modules'
 import { $ } from 'zx'
-import { updateInfoPlist, updateProjectConfig } from './safari-utils'
+import { updateInfoPlist, updateProjectConfig, createExportOptionsPlist } from './safari-utils'
 
 export interface SafariXcodeOptions {
   /**
@@ -39,6 +39,22 @@ export interface SafariXcodeOptions {
    * Defaults to true, you may want to set this to false in CI environments
    */
   openProject?: boolean
+  /**
+   * Automatically archive and export a .pkg or .ipa package using xcodebuild.
+   * Required for direct publishing with publish-browser-extension / wxt submit.
+   * Defaults to false.
+   */
+  buildPackage?: boolean
+  /**
+   * Custom scheme name for xcodebuild.
+   * Defaults to `${projectName} (macOS)` for macos projectType, or `${projectName} (iOS)` for ios.
+   */
+  scheme?: string
+  /**
+   * Custom exportOptions.plist path, or inline options object.
+   * If not provided, a default ExportOptions.plist with method 'app-store' and automatic signing will be generated.
+   */
+  exportOptionsPlist?: string | Record<string, any>
 }
 
 export default defineWxtModule<SafariXcodeOptions>({
@@ -123,6 +139,34 @@ export default defineWxtModule<SafariXcodeOptions>({
           developmentTeam,
           rootPath: wxt.config.root,
         })
+
+        if (options?.buildPackage) {
+          wxt.logger.info(`Archiving and exporting ${highlight('Safari package')} with ${highlight('xcodebuild')}...`)
+          const scheme = options.scheme ?? (projectType === 'ios' ? `${projectName} (iOS)` : `${projectName} (macOS)`)
+          const archivePath = `.output/${projectName}.xcarchive`
+
+          // 1. xcodebuild archive
+          wxt.logger.info(`Archiving scheme ${highlight(scheme)}...`)
+          await $`xcodebuild archive -project ${outputPath}/${projectName}.xcodeproj -scheme ${scheme} -archivePath ${archivePath}`
+
+          // 2. Prepare ExportOptions.plist
+          let plistPath: string
+          if (typeof options.exportOptionsPlist === 'string') {
+            plistPath = options.exportOptionsPlist
+          } else {
+            plistPath = `.output/ExportOptions.plist`
+            await createExportOptionsPlist(plistPath, {
+              teamID: developmentTeam,
+              customOptions: typeof options.exportOptionsPlist === 'object' ? options.exportOptionsPlist : undefined,
+            })
+          }
+
+          // 3. xcodebuild -exportArchive
+          wxt.logger.info(`Exporting package to ${highlight('.output/')}...`)
+          await $`xcodebuild -exportArchive -archivePath ${archivePath} -exportOptionsPlist ${plistPath} -exportPath .output/`
+
+          wxt.logger.success('Safari package created successfully!')
+        }
 
         wxt.logger.success('Safari Xcode project created successfully!')
       } catch (error) {

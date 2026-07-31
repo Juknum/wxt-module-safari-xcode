@@ -123,3 +123,50 @@ export function normaliseBundleIds(content: string, bundleIdentifier: string): s
     return `PRODUCT_BUNDLE_IDENTIFIER = ${quote(newId)};`
   })
 }
+
+export interface CreateExportOptionsPlistOptions {
+  method?: string
+  signingStyle?: string
+  teamID?: string
+  customOptions?: Record<string, any>
+}
+
+export async function createExportOptionsPlist(
+  filePath: string,
+  options: CreateExportOptionsPlistOptions,
+) {
+  const method = options.customOptions?.method ?? options.method ?? 'app-store'
+  const signingStyle = options.customOptions?.signingStyle ?? options.signingStyle ?? 'automatic'
+  const teamID = options.customOptions?.teamID ?? options.teamID
+
+  const entries: string[] = [
+    `\t<key>method</key>\n\t<string>${method}</string>`,
+    `\t<key>signingStyle</key>\n\t<string>${signingStyle}</string>`,
+  ]
+
+  if (teamID) {
+    entries.push(`\t<key>teamID</key>\n\t<string>${teamID}</string>`)
+  }
+
+  if (options.customOptions) {
+    for (const [key, value] of Object.entries(options.customOptions)) {
+      if (['method', 'signingStyle', 'teamID'].includes(key)) continue
+      if (typeof value === 'boolean') {
+        entries.push(`\t<key>${key}</key>\n\t<${value}/>`)
+      } else if (typeof value === 'string') {
+        entries.push(`\t<key>${key}</key>\n\t<string>${value}</string>`)
+      }
+    }
+  }
+
+  const content = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+${entries.join('\n')}
+</dict>
+</plist>
+`
+  await fs.writeFile(filePath, content, 'utf-8')
+}
+
